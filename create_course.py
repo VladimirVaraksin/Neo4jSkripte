@@ -131,7 +131,7 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         UNWIND $offers as offer
         MATCH (k:Kurs {kursNr: offer.kursNr})
         CREATE(o:Angebot {angNr: offer.angNr})
-        SET o.datum = offer.datum,
+        SET o.datum = date(offer.datum),
         o.ort = offer.ort
         CREATE (k)-[:ANGEBOTEN_ALS]->(o)
         """, offers=offers)
