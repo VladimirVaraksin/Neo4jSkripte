@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
-from print_record import print_records
 
 load_dotenv()
 
@@ -21,7 +20,12 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         ELSE date({year: 2026, month: a.datum.month, day: a.datum.day})
         END
         """)
-       
+
+        session.run("""
+        MATCH (a:Angebot)
+        WHERE a.ort = "Wedel"
+        SET a.ort = "Augsburg"
+        """)
     except Neo4jError as e:
         print('Exception GQL status:', e.gql_status)
         print('Exception GQL status description:', e.gql_status_description)
