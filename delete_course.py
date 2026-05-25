@@ -20,7 +20,7 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         MATCH (k:Kurs)
         OPTIONAL MATCH (t:Teilnehmer)-[:NIMMT_TEIL]->(:Angebot)<-[:ANGEBOTEN_ALS]-(k)
         WITH k, count(t) as anz_tn
-        WHERE anz_tn < 10
+        WHERE anz_tn < 2
         OPTIONAL MATCH (k)-[:VERWENDET_LITERATUR]->(l:Kursliteratur)
         OPTIONAL MATCH (k)-[:ANGEBOTEN_ALS]->(a:Angebot)
         DETACH DELETE k, a, l
