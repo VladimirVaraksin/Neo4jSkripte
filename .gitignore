@@ -222,7 +222,7 @@ __marimo__/
 *~
 
 # Emacs auto-save files
-#*#
+\#*#
 
 # Emacs lock files
 .#*
