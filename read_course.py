@@ -59,14 +59,13 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         """)
         print_records("alle Teilnehmer, die einen Kurs am eigenen Wohnort gebucht haben.", participants_own_place)
 
-        offers_without_participants = session.run("""
-        OPTIONAL MATCH (t:Teilnehmer)-[:NIMMT_TEIL]->(:Angebot)<-[:ANGEBOTEN_ALS]-(k:Kurs)
-        WITH k, count(t) as anz_tn
-        WHERE anz_tn = 0
-        MATCH (k)-[:ANGEBOTEN_ALS]->(a:Angebot)
-        RETURN k.titel AS Titel, a.angNr AS Angebotsnummer
+        offers_without_participants_alt = session.run("""
+        MATCH (k:Kurs)-[:ANGEBOTEN_ALS]->(a:Angebot)
+        WHERE NOT (a)<-[:NIMMT_TEIL]-(:Teilnehmer)
+        RETURN k.titel AS Kurstitel,
+        a.angNr AS Angebotsnummer;
         """)
-        print_records("alle Kursangebote (Kurstitel und Angebotsnummer), zu denen es noch keine Teilnehmer gibt", offers_without_participants)
+        print_records("Angebote ohne Teilnehmer", offers_without_participants_alt)
 
         courses_with_more_two_pp = session.run("""
         MATCH (t:Teilnehmer)-[:NIMMT_TEIL]->(:Angebot)<-[:ANGEBOTEN_ALS]-(k:Kurs)
@@ -86,7 +85,21 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         """)
         print_records("alle Meier, sowohl Teilnehmer wie auch Kursleiter.", all_meier)
 
+        all_meier_alt = session.run("""
+        MATCH (t:Teilnehmer)
+        WHERE t.name CONTAINS 'Meier'
+        RETURN t.name AS Name,
+       'Teilnehmer' AS Rolle
+        UNION
+        MATCH (kl:Kursleiter)
+        WHERE kl.name CONTAINS 'Meier'
+        RETURN kl.name AS Name,
+       'Kursleiter' AS Rolle;
+        """)
+        print_records("alle Meier, alternative Anfrage", all_meier_alt)
+
         course_num_offers = session.run("""
+        MATCH (k:Kurs)
         OPTIONAL MATCH (k:Kurs)-[:ANGEBOTEN_ALS]->(a:Angebot)
         WITH k.titel AS Titel, count(a) AS Anzahl_Angebote
         RETURN Titel, Anzahl_Angebote
@@ -95,10 +108,10 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
 
         course_requirements = session.run("""
         MATCH (k:Kurs)-[:VORAUSSETZUNG]->(v:Kurs)
-        WITH k.titel AS Titel, count(v) AS anz_vorauss
+        WITH k, count(v) AS anz_vorauss
         WHERE anz_vorauss >= 2
         ORDER BY anz_vorauss DESC
-        RETURN Titel, anz_vorauss
+        RETURN k.titel AS Kurstitel, anz_vorauss
         """)
         print_records("""die Kurstitel mit der Anzahl der Voraussetzungen, die mindestens 2 Voraussetzungen haben.
         Die Ausgabe soll so erfolgen, dass die Kurse mit
@@ -109,13 +122,21 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         MATCH (k:Kurs)-[:ANGEBOTEN_ALS]->(a:Angebot)<-[:FUEHRT]-(l:Kursleiter)
         WITH k.titel AS Titel, avg(l.gehalt) AS avg_gehalt
         RETURN Titel, avg_gehalt
+        ORDER BY avg_gehalt
         """)
         print_records("""Für alle Kurse (Titel ausgeben) das durchschnittliche Gehalt der Kursleiter,
         die ein Angebot dieses Kurses durchführen (nach diesem Durchschnitt aufsteigend sortiert).""", course_instructors)
 
         instructor_pairs = session.run("""
-        MATCH (k:Kurs)-[:ANGEBOTEN_ALS]->(a:Angebot)<-[:FUEHRT]-(l:Kursleiter)
-        RETURN k.titel, collect(distinct l.name) as kursleiter
+        MATCH (l1:Kursleiter)-[:FUEHRT]->(a1:Angebot)
+        <-[:ANGEBOTEN_ALS]-(k:Kurs)-[:ANGEBOTEN_ALS]->(a2:Angebot)
+        <-[:FUEHRT]-(l2:Kursleiter)
+        WHERE elementId(l1) < elementId(l2)
+        RETURN DISTINCT
+        l1.name AS Kursleiter1,
+        l2.name AS Kursleiter2,
+        k.titel AS Kurstitel
+        ORDER BY Kurstitel;
         """)
         print_records("""alle Paare von Kursleitern, die denselben Kurs halten, und den entsprechenden Kurstitel""",
                       instructor_pairs)
