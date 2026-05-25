@@ -14,11 +14,11 @@ with GraphDatabase.driver(URI, auth=AUTH).session(database=DATABASE) as session:
         session.run("""
         MATCH (a:Angebot)
         WHERE a.datum.year = 2023
-        SET a.datum = CASE 
-        WHEN a.datum.month = 2 AND a.datum.day = 29
-        THEN date({year: 2026, month: 2, day: 28})
-        ELSE date({year: 2026, month: a.datum.month, day: a.datum.day})
-        END
+        SET a.datum = date({
+        year: 2026,
+        month: a.datum.month,
+        day: a.datum.day
+        })
         """)
 
         session.run("""
